@@ -1,10 +1,10 @@
-"""Album Downloader: cerca un album, sceglie la cartella di qualità più alta e la scarica
-in "<cartella musica>\\Artista - Album".
+"""Album Downloader: searches for an album, picks the highest quality folder and downloads it
+to "<music folder>\\Artist - Album".
 
-Uso:
-- nella barra di ricerca:   album: Artista - Album
-- in una chat:              /album Artista - Album
-- altre opzioni trovate:    /album-list   e   /album-pick <numero>
+Usage:
+- in the search bar:        album: Artist - Album
+- in a chat:                /album Artist - Album
+- other folders found:      /album-list   and   /album-pick <number>
 """
 
 import os
@@ -51,45 +51,45 @@ class Plugin(BasePlugin):
         }
         self.metasettings = {
             "music_folder": {
-                "description": "Cartella della musica (qui viene creata la cartella \"Artista - Album\")",
+                "description": "Music folder (the \"Artist - Album\" folder is created here)",
                 "type": "file",
                 "chooser": "folder"
             },
             "search_prefix": {
-                "description": "Prefisso da usare nella barra di ricerca (es. album: Artista - Album)",
+                "description": "Prefix to use in the search bar (e.g. album: Artist - Album)",
                 "type": "string"
             },
             "wait_seconds": {
-                "description": "Secondi di attesa dei risultati prima di scegliere",
+                "description": "Seconds to wait for results before choosing",
                 "type": "integer", "minimum": 5, "maximum": 120
             },
             "min_mp3_bitrate": {
-                "description": "Bitrate minimo accettato per gli MP3 (se non ci sono FLAC)",
+                "description": "Minimum accepted MP3 bitrate (when no FLAC is available)",
                 "type": "integer", "minimum": 0, "maximum": 320
             },
             "prefer_hires": {
-                "description": "Preferisci FLAC hi-res (24bit / >48kHz) ai FLAC normali",
+                "description": "Prefer hi-res FLAC (24bit / >48kHz) over regular FLAC",
                 "type": "bool"
             },
             "auto_download": {
-                "description": "Scarica subito la cartella migliore (altrimenti mostra solo la lista)",
+                "description": "Download the best folder right away (otherwise only show the list)",
                 "type": "bool"
             }
         }
         self.commands = {
             "album": {
                 "callback": self.album_command,
-                "description": "Cerca un album e scarica la versione di qualità più alta",
-                "parameters": ["<Artista - Album..>"]
+                "description": "Search for an album and download the highest quality version",
+                "parameters": ["<Artist - Album..>"]
             },
             "album-list": {
                 "callback": self.album_list_command,
-                "description": "Mostra le cartelle trovate per l'ultimo album cercato"
+                "description": "Show the folders found for the last album search"
             },
             "album-pick": {
                 "callback": self.album_pick_command,
-                "description": "Scarica la cartella numero N dell'ultima ricerca",
-                "parameters": ["<numero>"]
+                "description": "Download folder number N from the last search",
+                "parameters": ["<number>"]
             }
         }
 
@@ -120,7 +120,7 @@ class Plugin(BasePlugin):
         self.jobs.clear()
         self.folder_requests.clear()
 
-    # Avvio ricerca #
+    # Starting a search #
 
     def outgoing_global_search_event(self, text):
 
@@ -161,7 +161,7 @@ class Plugin(BasePlugin):
         job.timer_id = events.schedule(delay=wait_seconds, callback=self._finish_search, callback_args=(token,))
         self.jobs[token] = self.last_job = job
 
-        self._notify(job, f"Cerco \"{query}\"… scelgo la versione migliore tra {wait_seconds} secondi.")
+        self._notify(job, f"Searching for \"{query}\"… picking the best version in {wait_seconds} seconds.")
 
     def _file_search_response(self, msg):
 
@@ -172,16 +172,16 @@ class Plugin(BasePlugin):
 
         job.responses.append((msg.username, msg.list, msg.freeulslots, msg.ulspeed, msg.inqueue))
 
-    # Scelta #
+    # Choosing #
 
     def _finish_search(self, token):
 
-        # Chiamato dallo scheduler di Nicotine+: un'eccezione qui chiuderebbe l'intero programma
+        # Called by the Nicotine+ scheduler: an exception here would close the whole program
         try:
             self._choose_candidate(token)
 
         except Exception as error:
-            self.log(f"Errore durante la scelta dell'album: {error!r}")
+            self.log(f"Error while choosing the album: {error!r}")
 
     def _choose_candidate(self, token):
 
@@ -199,27 +199,27 @@ class Plugin(BasePlugin):
         )
 
         if not job.candidates:
-            self._notify(job, f"Nessuna cartella FLAC/MP3 adatta trovata per \"{job.query}\" "
-                              f"({len(job.responses)} utenti hanno risposto).", popup=True)
+            self._notify(job, f"No suitable FLAC/MP3 folder found for \"{job.query}\" "
+                              f"({len(job.responses)} users responded).", popup=True)
             return
 
         if self.settings["auto_download"]:
             self._download(job, 0)
         else:
-            self._notify(job, f"Trovate {len(job.candidates)} cartelle per \"{job.query}\". "
-                              "Scegli con /album-pick <numero>.", popup=True)
+            self._notify(job, f"Found {len(job.candidates)} folders for \"{job.query}\". "
+                              "Choose one with /album-pick <number>.", popup=True)
 
         self._show_candidates(job)
 
     def _show_candidates(self, job):
 
-        lines = [f"Cartelle trovate per \"{job.query}\" (la prima è la migliore):"]
+        lines = [f"Folders found for \"{job.query}\" (the first one is the best):"]
 
         for number, candidate in enumerate(job.candidates[:MAX_LISTED_CANDIDATES], start=1):
             lines.append(f"  {number}. {candidate.describe()}")
 
         if len(job.candidates) > 1:
-            lines.append("Per scaricarne un'altra: /album-pick <numero>")
+            lines.append("To download a different one: /album-pick <number>")
 
         self._notify(job, "\n".join(lines))
 
@@ -232,18 +232,18 @@ class Plugin(BasePlugin):
         destination = os.path.join(music_folder, clean_file(job.folder_name))
 
         if not force and os.path.isdir(destination) and os.listdir(destination):
-            self._notify(job, f"La cartella \"{destination}\" esiste già e non è vuota, non scarico niente. "
-                              f"Per scaricare comunque: /album-pick {index + 1}", popup=True)
+            self._notify(job, f"The folder \"{destination}\" already exists and is not empty, nothing downloaded. "
+                              f"To download anyway: /album-pick {index + 1}", popup=True)
             return
 
-        # File già visti nei risultati di ricerca
+        # Files already seen in the search results
         for virtual_path, (size, attrs, subfolder) in candidate.files.items():
             if album_selection.should_download_file(virtual_path, candidate.format):
                 self.core.downloads.enqueue_download(
                     candidate.username, virtual_path, folder_path=os.path.join(destination, subfolder),
                     size=size, file_attributes=attrs)
 
-        # Chiedi il contenuto completo delle cartelle (copertina, tracce non comparse nella ricerca…)
+        # Ask for the full folder contents (cover art, tracks missing from the search results…)
         for folder_path in {candidate.folder_path} | candidate.source_folders:
             key = (candidate.username, folder_path)
             self.folder_requests[key] = (candidate, destination)
@@ -252,7 +252,7 @@ class Plugin(BasePlugin):
             events.schedule(
                 delay=FOLDER_REQUEST_TIMEOUT, callback=self.folder_requests.pop, callback_args=(key, None))
 
-        self._notify(job, f"Download avviato: {candidate.describe()} → {destination}", popup=True)
+        self._notify(job, f"Download started: {candidate.describe()} → {destination}", popup=True)
 
     def _folder_contents_response(self, msg):
 
@@ -279,16 +279,16 @@ class Plugin(BasePlugin):
                         candidate.username, virtual_path, folder_path=folder_destination,
                         size=size, file_attributes=attrs)
 
-    # Comandi #
+    # Commands #
 
     def album_list_command(self, _args, **_unused):
 
         if self.last_job is None or not self.last_job.finished:
-            self.output("Nessuna ricerca album completata finora.")
+            self.output("No album search completed yet.")
             return
 
         if not self.last_job.candidates:
-            self.output(f"Nessuna cartella adatta trovata per \"{self.last_job.query}\".")
+            self.output(f"No suitable folder found for \"{self.last_job.query}\".")
             return
 
         self._show_candidates(self.last_job)
@@ -298,7 +298,7 @@ class Plugin(BasePlugin):
         job = self.last_job
 
         if job is None or not job.finished or not job.candidates:
-            self.output("Nessuna ricerca album con risultati da cui scegliere.")
+            self.output("No album search with results to choose from.")
             return False
 
         try:
@@ -307,15 +307,15 @@ class Plugin(BasePlugin):
             index = -1
 
         if not 0 <= index < len(job.candidates):
-            self.output(f"Numero non valido: scegli tra 1 e {len(job.candidates)}.")
+            self.output(f"Invalid number: choose between 1 and {len(job.candidates)}.")
             return False
 
-        # Il comando arriva da questa chat: le risposte vanno qui
+        # The command comes from this chat: replies go here
         job.source = self.parent.command_source
         self._download(job, index, force=True)
         return True
 
-    # Messaggi #
+    # Messages #
 
     def _notify(self, job, text, popup=False):
 

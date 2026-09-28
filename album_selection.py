@@ -1,13 +1,13 @@
-"""Logica di scelta della cartella migliore tra i risultati di ricerca.
+"""Logic for choosing the best folder among the search results.
 
-Non dipende da Nicotine+, così può essere testata da sola.
+It does not depend on Nicotine+, so it can be tested on its own.
 """
 
 import re
 import unicodedata
 from collections import Counter
 
-# Chiavi degli attributi dei file Soulseek (pynicotine.slskmessages.FileAttribute)
+# Soulseek file attribute keys (pynicotine.slskmessages.FileAttribute)
 ATTR_BITRATE = 0
 ATTR_VBR = 2
 ATTR_SAMPLE_RATE = 4
@@ -18,15 +18,15 @@ AUDIO_EXTENSIONS = {
     "flac", "mp3", "m4a", "aac", "alac", "ogg", "opus", "wav", "aif", "aiff", "ape", "wv", "wma", "dsf", "dff"
 }
 
-# Lettere che NFKD non scompone ("Ágætis" -> "agaetis")
+# Letters that NFKD does not decompose ("Ágætis" -> "agaetis")
 TRANSLITERATIONS = str.maketrans({"æ": "ae", "ø": "o", "œ": "oe", "ß": "ss", "ð": "d", "þ": "th", "ł": "l", "đ": "d"})
 
-# Sottocartelle tipo "CD1", "Disc 2", "Disco 1 - Bonus"
+# Subfolders like "CD1", "Disc 2", "Disco 1 - Bonus"
 DISC_FOLDER_RE = re.compile(r"^(cd|disc|disk|disco)[\s._-]*\d+\b", re.IGNORECASE)
 
 
 def normalize_words(text):
-    """Parole in minuscolo, senza accenti né punteggiatura ("Sgt. Pepper's" -> ["sgt", "peppers"])."""
+    """Lowercase words, without accents or punctuation ("Sgt. Pepper's" -> ["sgt", "peppers"])."""
 
     text = unicodedata.normalize("NFKD", text)
     text = "".join(char for char in text if not unicodedata.combining(char))
@@ -35,7 +35,7 @@ def normalize_words(text):
 
 
 def parse_query(query):
-    """'Artista - Album' -> (artista, album, nome cartella)."""
+    """'Artist - Album' -> (artist, album, folder name)."""
 
     query = " ".join(query.split())
 
@@ -59,7 +59,7 @@ def most_common(values):
 
 
 class Candidate:
-    """Una cartella (album) condivisa da un utente."""
+    """A folder (album) shared by a user."""
 
     def __init__(self, username, folder_path, free_slots, speed, queue):
 
@@ -69,7 +69,7 @@ class Candidate:
         self.speed = speed or 0
         self.queue = queue or 0
 
-        # virtual_path -> (size, attrs, sottocartella relativa, es. "" oppure "CD1")
+        # virtual_path -> (size, attrs, relative subfolder, e.g. "" or "CD1")
         self.files = {}
         self.source_folders = set()
 
@@ -114,7 +114,7 @@ class Candidate:
         )
 
     def quality_bucket(self, prefer_hires):
-        """Più alto = meglio. FLAC hi-res > FLAC > MP3 320 > MP3 V0/256 > altri MP3."""
+        """Higher is better. Hi-res FLAC > FLAC > MP3 320 > MP3 V0/256 > other MP3."""
 
         if self.format == "FLAC":
             return 5 if (self.is_hires and prefer_hires) else 4
@@ -152,18 +152,18 @@ class Candidate:
         return "MP3"
 
     def availability_label(self):
-        return "slot libero" if self.free_slots else f"in coda: {self.queue}"
+        return "free slot" if self.free_slots else f"queued: {self.queue}"
 
     def describe(self):
-        return (f"[{self.quality_label()}] {self.num_tracks} tracce · {self.username} "
+        return (f"[{self.quality_label()}] {self.num_tracks} tracks · {self.username} "
                 f"({self.availability_label()}) · {self.folder_path}")
 
 
 def build_candidates(responses):
-    """responses: lista di (username, file_list, free_slots, speed, queue).
+    """responses: list of (username, file_list, free_slots, speed, queue).
 
-    file_list contiene tuple (code, virtual_path, size, ext, attrs) come in FileSearchResponse.
-    I file dentro sottocartelle tipo "CD1" vengono raggruppati nella cartella dell'album.
+    file_list holds (code, virtual_path, size, ext, attrs) tuples, as in FileSearchResponse.
+    Files inside subfolders like "CD1" are grouped under the album folder.
     """
 
     candidates = {}
@@ -193,7 +193,7 @@ def build_candidates(responses):
 
 
 def rank_candidates(responses, album, min_mp3_bitrate=192, prefer_hires=True):
-    """Restituisce le cartelle adatte, dalla migliore alla peggiore."""
+    """Returns the suitable folders, from best to worst."""
 
     album_words = set(normalize_words(album))
     candidates = []
@@ -208,7 +208,7 @@ def rank_candidates(responses, album, min_mp3_bitrate=192, prefer_hires=True):
                 and candidate.bitrate < min_mp3_bitrate):
             continue
 
-        # Il titolo dell'album deve comparire nel percorso della cartella, non solo nei nomi dei file
+        # The album title must appear in the folder path, not just in the file names
         candidate.name_match = album_words.issubset(normalize_words(candidate.folder_path))
 
         if candidate.name_match:
@@ -217,7 +217,7 @@ def rank_candidates(responses, album, min_mp3_bitrate=192, prefer_hires=True):
     if not candidates:
         return []
 
-    # Numero di tracce "atteso": il più frequente tra le cartelle trovate (a parità, il più alto)
+    # "Expected" track count: the most common among the folders found (the highest on ties)
     track_counts = Counter(c.num_tracks for c in candidates if c.num_tracks >= 2)
 
     if track_counts:
@@ -243,7 +243,7 @@ def rank_candidates(responses, album, min_mp3_bitrate=192, prefer_hires=True):
 
 
 def should_download_file(virtual_path, chosen_format):
-    """Scarica copertine, cue, log ecc., ma non file audio di un formato diverso da quello scelto."""
+    """Download cover art, cue, log etc., but not audio files in a format other than the chosen one."""
 
     extension = file_extension(virtual_path)
     return extension not in AUDIO_EXTENSIONS or extension == FORMAT_EXTENSIONS[chosen_format]

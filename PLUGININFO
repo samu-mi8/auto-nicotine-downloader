@@ -1,0 +1,4 @@
+Version = "2026-09-28r00"
+Authors = ["samue"]
+Name = "Album Downloader"
+Description = "Cerca un album, sceglie la cartella di qualità più alta (FLAC, con MP3 come riserva) e la scarica in una cartella \"Artista - Album\" nella tua cartella della musica.\n\nUso:\n- barra di ricerca: album: Artista - Album\n- chat: /album Artista - Album\n- /album-list mostra le altre cartelle trovate\n- /album-pick <numero> scarica una cartella diversa"

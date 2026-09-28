@@ -1,4 +1,4 @@
-Version = "2026-09-28r00"
-Authors = ["samue"]
+Version = "2026-09-28r01"
+Authors = ["samu"]
 Name = "Album Downloader"
-Description = "Cerca un album, sceglie la cartella di qualità più alta (FLAC, con MP3 come riserva) e la scarica in una cartella \"Artista - Album\" nella tua cartella della musica.\n\nUso:\n- barra di ricerca: album: Artista - Album\n- chat: /album Artista - Album\n- /album-list mostra le altre cartelle trovate\n- /album-pick <numero> scarica una cartella diversa"
+Description = "Searches for an album, picks the highest quality folder (FLAC, with MP3 as a fallback) and downloads it to an \"Artist - Album\" folder in your music folder.\n\nUsage:\n- search bar: album: Artist - Album\n- chat: /album Artist - Album\n- /album-list shows the other folders found\n- /album-pick <number> downloads a different folder"
